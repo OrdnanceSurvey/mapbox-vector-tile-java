@@ -4,9 +4,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class LayerGroup {
+public class Mvt {
 
     private List<Layer> layers = new ArrayList<>();
+
+    public Mvt(Layer... layers) {
+        addLayers(layers);
+    }
+
+    public Mvt(List<Layer> list) {
+        addLayers(list);
+    }
+
+    public void addLayers(List<Layer> list) {
+        layers.addAll(list);
+    }
 
     public void addLayers(Layer... layer) {
         layers.addAll(Arrays.asList(layer));
@@ -42,7 +54,7 @@ public class LayerGroup {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        LayerGroup that = (LayerGroup) o;
+        Mvt that = (Mvt) o;
 
         return layers != null ? layers.equals(that.layers) : that.layers == null;
     }
@@ -54,7 +66,7 @@ public class LayerGroup {
 
     @Override
     public String toString() {
-        return "LayerGroup{" +
+        return "Mvt{" +
                 "layers=" + layers +
                 '}';
     }

@@ -15,7 +15,7 @@ public class MvtReaderTest {
     @Test
     public void testLayers() {
         try {
-            LayerGroup result = MvtReader.loadMvtWithLayers(
+            Mvt result = MvtReader.loadMvt(
                     Paths.get("src/test/resources/vec_tile_test/game.mvt"),
                     new GeometryFactory(),
                     new TagKeyValueMapConverter());
