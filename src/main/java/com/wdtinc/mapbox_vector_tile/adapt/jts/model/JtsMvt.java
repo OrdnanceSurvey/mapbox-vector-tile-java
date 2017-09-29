@@ -1,9 +1,6 @@
 package com.wdtinc.mapbox_vector_tile.adapt.jts.model;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * JTS model of a Mapbox Vector Tile.
@@ -21,9 +18,27 @@ public class JtsMvt {
     }
 
     /**
+     * Create MVT with single layer.
+     *
+     * @param layer single MVT layer
+     */
+    public JtsMvt(JtsLayer layer) {
+        this(Collections.singletonList(layer));
+    }
+
+    /**
+     * Create MVT with the provided layers.
+     *
+     * @param layers multiple MVT layers
+     */
+    public JtsMvt(JtsLayer... layers) {
+        this(new ArrayList<>(Arrays.asList(layers)));
+    }
+
+    /**
      * Create a MVT with the provided layers.
      *
-     * @param layers
+     * @param layers multiple MVT layers
      */
     public JtsMvt(Collection<JtsLayer> layers) {
 
