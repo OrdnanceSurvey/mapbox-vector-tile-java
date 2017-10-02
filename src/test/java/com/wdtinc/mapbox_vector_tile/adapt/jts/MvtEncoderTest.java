@@ -4,43 +4,46 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
+import com.wdtinc.mapbox_vector_tile.adapt.jts.model.JtsLayer;
+import com.wdtinc.mapbox_vector_tile.adapt.jts.model.JtsMvt;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
-public class MvtUtilTest {
+public final class MvtEncoderTest {
+
+    private static final GeometryFactory GEOMETRY_FACORY = new GeometryFactory();
+
+    private static JtsMvt decode(byte[] bytes) throws IOException {
+        return MvtReader.loadMvt(new ByteArrayInputStream(bytes), GEOMETRY_FACORY, new TagKeyValueMapConverter());
+    }
 
     @Test
     public void singleLayer() throws IOException {
         Collection<Geometry> geometries = PointGen.australia();
 
-        Layer layer = new Layer("animals", geometries);
-        Mvt mvt = new Mvt(layer);
+        JtsLayer layer = new JtsLayer("animals", geometries);
+        JtsMvt mvt = new JtsMvt(singletonList(layer));
 
-        byte[] encoded = MvtUtil.encode(mvt);
-
-        Mvt actual = MvtUtil.decode(encoded);
-        Mvt expected = mvt;
-
-        assertEquals(expected, actual);
+        final byte[] encoded = MvtEncoder.encode(mvt);
+        assertEquals(mvt, decode(encoded));
     }
 
     @Test
     public void multipleLayers() throws IOException {
-        Layer layer = new Layer("Australia", PointGen.australia());
-        Layer layer2 = new Layer("United Kingdom", PointGen.uk());
-        Layer layer3 = new Layer("United States of America", PointGen.usa());
-        Mvt mvt = new Mvt(layer, layer2, layer3);
+        JtsLayer layer = new JtsLayer("Australia", PointGen.australia());
+        JtsLayer layer2 = new JtsLayer("United Kingdom", PointGen.uk());
+        JtsLayer layer3 = new JtsLayer("United States of America", PointGen.usa());
+        JtsMvt mvt = new JtsMvt(asList(layer, layer2, layer3));
 
-        byte[] encoded = MvtUtil.encode(mvt);
-
-        Mvt actual = MvtUtil.decode(encoded);
-        Mvt expected = mvt;
-
-        assertEquals(expected, actual);
+        final byte[] encoded = MvtEncoder.encode(mvt);
+        assertEquals(mvt, decode(encoded));
     }
 
     private static class PointGen {
@@ -79,7 +82,7 @@ public class MvtUtilTest {
         }
 
         private static Collection<Geometry> getPoints(Point... points) {
-            return Arrays.asList(points);
+            return asList(points);
         }
 
         private static Point createPoint(String name) {
