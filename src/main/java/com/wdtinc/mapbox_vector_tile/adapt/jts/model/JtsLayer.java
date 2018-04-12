@@ -1,5 +1,10 @@
 package com.wdtinc.mapbox_vector_tile.adapt.jts.model;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.locationtech.jts.geom.Geometry;
 
 import java.util.ArrayList;
@@ -64,7 +69,7 @@ public class JtsLayer {
         JtsLayer layer = (JtsLayer) o;
 
         if (name != null ? !name.equals(layer.name) : layer.name != null) return false;
-        return geometries != null ? geometries.equals(layer.geometries) : layer.geometries == null;
+        return GeometryEqualitySupport.areEqual(geometries, layer.geometries);
     }
 
     @Override
@@ -95,6 +100,74 @@ public class JtsLayer {
         }
         if (geometries == null) {
             throw new IllegalArgumentException("geometry collection is null");
+        }
+    }
+
+    private static class GeometryEqualitySupport {
+
+        /**
+         * JTS geometry equality does not consider User Data.
+         *
+         * This is an enhanced check to ensure that both the geometry and userdata is identical.
+         *
+         * See:
+         * https://github.com/locationtech/jts/blob/181003a733623467968833fb08440fa921561596/modules/core/src/main/java/org/locationtech/jts/geom/Geometry.java#L1511
+         *
+         * @return true if geometries and userdata are identical
+         */
+        static boolean areEqual(Collection<Geometry> geometries, Collection<Geometry> geometries2) {
+            if (geometries != null) {
+                return geometries.equals(geometries2)
+                    && GeometryEqualitySupport.areUserAttributesIdentical(geometries, geometries2);
+            } else {
+                return geometries == geometries2;
+            }
+        }
+
+        private static boolean areUserAttributesIdentical(Collection<Geometry>  geometries,
+                                                  Collection<Geometry> geometries2) {
+            // first pass - build lookup based on Geometry and UserData
+            Map<Integer, List<Geometry>> l1GeometryByHashCode = new HashMap<>();
+            for (Geometry geom : geometries) {
+                final int key = getLookupId(geom);
+                if (!l1GeometryByHashCode.containsKey(key)) {
+                    l1GeometryByHashCode.put(key, Arrays.asList(geom));
+                } else {
+                    // hash collision
+                    l1GeometryByHashCode.get(key).add(geom);
+                }
+            }
+
+            // second pass - verify each geometry against l1
+            for (Geometry l2Geometry : geometries2) {
+                int key = getLookupId(l2Geometry);
+                if (! (l1GeometryByHashCode.containsKey(key)
+                    && contains(l2Geometry, l1GeometryByHashCode.get(key)))) {
+                    // user data is different
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static boolean contains(Geometry geometry, List<Geometry> items) {
+            // we must check that one of those geometries matches!
+            for (Geometry item : items) {
+                if (Objects.equals(item, geometry)) {
+                    Object a = item.getUserData();
+                    Object b = geometry.getUserData();
+
+                    if ((a == b) || (a != null && a.equals(b))) {
+                        return true; // this is good
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static int getLookupId(Geometry geom) {
+            return 31 * geom.hashCode()
+                + (geom.getUserData() != null ? geom.getUserData().hashCode() : 0);
         }
     }
 }

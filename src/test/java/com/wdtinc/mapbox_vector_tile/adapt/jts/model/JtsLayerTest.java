@@ -82,6 +82,98 @@ public final class JtsLayerTest {
     }
 
     @Test
+    public void testEqualityWithUserAttributes() {
+        // two identical points
+        Point point = createPoint(new int[]{50, 0});
+        Point point2 = createPoint(new int[]{50, 0});
+
+        // noise
+        Point point3 = createPoint(new int[]{60, 10});
+
+        // add attributes only to the first point
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("id", "test");
+        point.setUserData(attributes);
+
+        // define two layers (geometries are the same _but_ the attributes are not)
+        JtsLayer layer = new JtsLayer("Point", Arrays.asList(point, point3));
+        JtsLayer layer2 = new JtsLayer("Point", Arrays.asList(point2, point3));
+
+        assertFalse(layer.equals(layer2));
+    }
+
+    @Test
+    public void testEqualityWithoutUserAttributes() {
+        // two identical points
+        Point point = createPoint(new int[]{50, 0});
+        Point point2 = createPoint(new int[]{50, 0});
+        assertEquals(point.hashCode(), point2.hashCode());
+
+        // noise
+        Point point3 = createPoint(new int[]{60, 10});
+
+        // define two layers (geometries are the same _but_ the attributes are not)
+        JtsLayer layer = new JtsLayer("Point", Arrays.asList(point, point3));
+        JtsLayer layer2 = new JtsLayer("Point", Arrays.asList(point2, point3));
+
+        assertTrue(layer.equals(layer2));
+    }
+
+    @Test
+    public void testEqualityLargeNullUserData() {
+        // first set
+        List<Geometry> geometries = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            geometries.add(createPointWithUserData(i));
+        }
+
+        // second set
+        List<Geometry> geometries2 = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            geometries2.add(createPointWithUserData(i));
+        }
+
+        // make the second set different
+        geometries2.get(0).setUserData(null);
+
+        JtsLayer layer = new JtsLayer("Point", geometries);
+        JtsLayer layer2 = new JtsLayer("Point", geometries2);
+        assertFalse(layer.equals(layer2));
+    }
+
+    @Test
+    public void testEqualityLargeDifferentUserData() {
+        // first set
+        List<Geometry> geometries = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            geometries.add(createPointWithUserData(i));
+        }
+
+        // second set
+        List<Geometry> geometries2 = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            geometries2.add(createPointWithUserData(i));
+        }
+
+        // make the second set have different metadata
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("id", "DIFFERENT DATA!!!!");
+        geometries2.get(0).setUserData(attributes);
+
+        JtsLayer layer = new JtsLayer("Point", geometries);
+        JtsLayer layer2 = new JtsLayer("Point", geometries2);
+        assertFalse(layer.equals(layer2));
+    }
+
+    private Point createPointWithUserData(int id) {
+        Point point = createPoint(new int[]{id, 0});
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("id", "test " + id);
+        point.setUserData(attributes);
+        return point;
+    }
+
+    @Test
     public void testToString() {
         JtsLayer layer1 = new JtsLayer("apples");
         String actual = layer1.toString();
