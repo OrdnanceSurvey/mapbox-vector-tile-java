@@ -93,7 +93,9 @@ public final class MvtEncoderTest {
             Point point = GEOMETRY_FACTORY.createPoint(coord);
 
             Map<String, Object> attributes = new LinkedHashMap<>();
-            attributes.put("id", name.hashCode());
+            // Vector tiles only support 64 ints (Java long)
+            // https://github.com/mapbox/vector-tile-spec/blob/26b7823b16df1e15f55adb44243a3896acb7b804/2.1/vector_tile.proto#L24
+            attributes.put("id", (long) name.hashCode());
             attributes.put("name", name);
             point.setUserData(attributes);
 

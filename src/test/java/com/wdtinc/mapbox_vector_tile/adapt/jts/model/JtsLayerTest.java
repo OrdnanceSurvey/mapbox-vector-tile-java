@@ -28,6 +28,14 @@ public final class JtsLayerTest {
 
     @Test
     public void testLayerCollection() {
+        // Using Collections (unmodifiableCollection) rather than Lists or Sets prevents the equals
+        // and hashcode from working as one might expect.  Specifically, the Java equals contract
+        // mandates that equality must be symmetric.  Lists and Sets can only be equal to their
+        // respective types - and therefore a collection comparison would fail.
+        // An UnmodifiableList is an UnmodifiableCollection BUT the same is not true in reverse.
+        // See:
+        // https://stackoverflow.com/questions/31733537/unmodifiable-collection-equality-in-java#answer-31733658
+        // https://stackoverflow.com/questions/12851229/hashcode-and-equals-for-collections-unmodifiablecollection/12851469#12851469
         String layerName = "Points of Interest";
         List<Geometry> geometries = new ArrayList<>();
 
@@ -45,13 +53,12 @@ public final class JtsLayerTest {
     @Test
     public void testAddGeometry() {
         String layerName = "Points of Interest";
-        List<Geometry> geometries = new ArrayList<>();
 
         Point point = createPoint(new int[]{51, 0});
+        List<Geometry> geometries = new ArrayList<>();
+        geometries.add(point);
 
         JtsLayer layer = new JtsLayer(layerName, geometries);
-        layer.getGeometries().add(point);
-
         assertTrue(layer.getGeometries().contains(point));
     }
 
@@ -64,11 +71,23 @@ public final class JtsLayerTest {
         Point point = createPoint(new int[]{50, 0});
         Point point2 = createPoint(new int[]{51, 1});
         Collection<Geometry> points = Arrays.asList(point, point2);
+        geometries.addAll(points);
 
         JtsLayer layer = new JtsLayer(layerName, geometries);
-        layer.getGeometries().addAll(points);
 
         assertTrue(layer.getGeometries().containsAll(Arrays.asList(point, point2)));
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testUnmodifiableLayerCollection() {
+        String layerName = "Points of Interest";
+
+        Point point = createPoint(new int[]{51, 0});
+        List<Geometry> geometries = new ArrayList<>();
+        geometries.add(point);
+
+        JtsLayer layer = new JtsLayer(layerName, geometries);
+        layer.getGeometries().add(point);
     }
 
     @Test
@@ -185,7 +204,7 @@ public final class JtsLayerTest {
     public void testHash() {
         JtsLayer layer = new JtsLayer("code");
         int actual = layer.hashCode();
-        int expected = 94834612;
+        int expected = -1355094307;
         assertEquals(expected, actual);
     }
 

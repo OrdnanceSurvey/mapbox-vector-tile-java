@@ -70,6 +70,9 @@ public final class TagKeyValueMapConverter implements ITagConverter {
             return null;
         }
 
+        if (tags.size() == 0) {
+            return Collections.emptyList();
+        }
 
         final Map<String, Object> userData = new LinkedHashMap<>(((tags.size() + 1) / 2));
 

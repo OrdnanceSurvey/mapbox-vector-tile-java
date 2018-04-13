@@ -120,6 +120,9 @@ public final class JtsAdapter {
         Object nextUserData;
         for(Geometry nextInterGeom : intersectedGeoms) {
             nextUserData = nextInterGeom.getUserData();
+            if (nextUserData == null) {
+                nextUserData = Collections.emptyList();
+            }
 
             nextTransformGeom = t.transform(nextInterGeom);
 

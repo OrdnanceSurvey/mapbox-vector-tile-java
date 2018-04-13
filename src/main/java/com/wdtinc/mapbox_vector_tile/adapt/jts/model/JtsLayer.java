@@ -1,10 +1,11 @@
 package com.wdtinc.mapbox_vector_tile.adapt.jts.model;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.locationtech.jts.geom.Geometry;
 
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.Collection;
 public class JtsLayer {
 
     private final String name;
-    private final Collection<Geometry> geometries;
+    private final List<Geometry> geometries;
 
     /**
      * Create an empty JTS layer.
@@ -27,7 +28,7 @@ public class JtsLayer {
      * @throws IllegalArgumentException when {@code name} is null
      */
     public JtsLayer(String name) {
-        this(name, new ArrayList<>(0));
+        this(name, Collections.emptyList());
     }
 
     /**
@@ -40,7 +41,7 @@ public class JtsLayer {
     public JtsLayer(String name, Collection<Geometry> geometries) {
         validate(name, geometries);
         this.name = name;
-        this.geometries = geometries;
+        this.geometries = Collections.unmodifiableList(new ArrayList<>(geometries));
     }
 
     /**
@@ -76,6 +77,7 @@ public class JtsLayer {
     public int hashCode() {
         int result = name != null ? name.hashCode() : 0;
         result = 31 * result + (geometries != null ? geometries.hashCode() : 0);
+        result = 31 * result + (geometries != null ? GeometryEqualitySupport.hash(geometries) : 0);
         return result;
     }
 
@@ -101,9 +103,50 @@ public class JtsLayer {
         if (geometries == null) {
             throw new IllegalArgumentException("geometry collection is null");
         }
+        checkAttributes(geometries);
+    }
+
+    private static void checkAttributes(Collection<Geometry> geometries) {
+        for (Geometry g : geometries) {
+            if (g.getUserData() != null) {
+                if (g.getUserData() instanceof Map) {
+                    Map attr = (Map) g.getUserData();
+                    for (Object key : attr.keySet()) {
+                        if (!(key instanceof String)) {
+                            throw new IllegalArgumentException("keys must be strings. "
+                                + "Unacceptable" + key);
+                        }
+                    }
+
+                    for (Object value : attr.values()) {
+                        if (value instanceof Integer) {
+                            throw new IllegalArgumentException("Mapbox specification mandates "
+                                + "int64 (Java long).  Unacceptable: " + value);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static class GeometryEqualitySupport {
+
+        static int hash(Collection<Geometry> geoms) {
+            ArrayList<Geometry> list = new ArrayList<>(geoms);
+            Comparator<Geometry> c = new Comparator<Geometry>() {
+                @Override
+                public int compare(Geometry o1, Geometry o2) {
+                    return o1.compareTo(o2);
+                }
+            };
+            list.sort(c);
+
+            long result = 17;
+            for (Geometry g : geoms) {
+                result = 31 * result +  (g != null ? g.hashCode() : 0);
+            }
+            return (int) result;
+        }
 
         /**
          * JTS geometry equality does not consider User Data.
@@ -117,11 +160,17 @@ public class JtsLayer {
          */
         static boolean areEqual(Collection<Geometry> geometries, Collection<Geometry> geometries2) {
             if (geometries != null) {
-                return geometries.equals(geometries2)
-                    && GeometryEqualitySupport.areUserAttributesIdentical(geometries, geometries2);
+                return geometries2 != null
+                    && areGeometriesSame(geometries, geometries2)
+                    && areUserAttributesIdentical(geometries, geometries2);
             } else {
                 return geometries == geometries2;
             }
+        }
+
+        private static boolean areGeometriesSame(Collection<Geometry>  geometries,
+                                                 Collection<Geometry> geometries2) {
+            return geometries.containsAll(geometries2) && geometries.containsAll(geometries2);
         }
 
         private static boolean areUserAttributesIdentical(Collection<Geometry>  geometries,
@@ -141,8 +190,9 @@ public class JtsLayer {
             // second pass - verify each geometry against l1
             for (Geometry l2Geometry : geometries2) {
                 int key = getLookupId(l2Geometry);
-                if (! (l1GeometryByHashCode.containsKey(key)
-                    && contains(l2Geometry, l1GeometryByHashCode.get(key)))) {
+                boolean keyAndValueMatch = l1GeometryByHashCode.containsKey(key)
+                    && contains(l2Geometry, l1GeometryByHashCode.get(key));
+                if (!keyAndValueMatch) {
                     // user data is different
                     return false;
                 }
@@ -153,7 +203,7 @@ public class JtsLayer {
         private static boolean contains(Geometry geometry, List<Geometry> items) {
             // we must check that one of those geometries matches!
             for (Geometry item : items) {
-                if (Objects.equals(item, geometry)) {
+                if (item.equals(geometry)) {
                     Object a = item.getUserData();
                     Object b = geometry.getUserData();
 
